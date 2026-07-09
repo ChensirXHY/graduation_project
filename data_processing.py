@@ -86,3 +86,29 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig('irr_vs_power.png', dpi=150)
 plt.show()
+
+
+# 数据质量速查表
+print("===== 数据质量速查 =====")
+print(f"总时间步数: {len(df_merged)}")
+print(f"时间频率: {df_merged['DATE_TIME'].diff().mode()[0]}")  # 常见时间间隔
+print(f"总功率范围: {df_merged['TOTAL_AC_POWER'].min():.2f} ~ {df_merged['TOTAL_AC_POWER'].max():.2f} kW")
+print(f"辐照度范围: {df_merged['IRRADIATION'].min():.2f} ~ {df_merged['IRRADIATION'].max():.2f} W/m²")
+print(f"夜间零值占比: {(df_merged['TOTAL_AC_POWER']==0).mean():.1%}")
+
+# 检查是否有功率为负值（理论上不应该）
+if (df_merged['TOTAL_AC_POWER'] < 0).any():
+    print("⚠️ 警告：发现负功率值，需要进一步清洗！")
+else:
+    print("✅ 未发现负功率值。")
+
+# 检查时间戳是否严格单调递增
+if df_merged['DATE_TIME'].is_monotonic_increasing:
+    print("✅ 时间戳单调递增，滑动窗口构建安全。")
+else:
+    print("⚠️ 时间戳无序！必须按 DATE_TIME 排序。")
+    df_merged.sort_values('DATE_TIME', inplace=True)
+
+# 保存清洗后的数据（方便下一步直接用）
+df_merged.to_csv('archive/plant_1_cleaned.csv', index=False)
+print("清洗后数据已保存至 archive/plant_1_cleaned.csv")

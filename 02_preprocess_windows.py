@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+import pickle
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -83,3 +85,87 @@ with open('archive/feature_columns.txt', 'w') as f:
     f.write('\n'.join(feature_cols) + '\n')
 
 print("\n已生成 train_features.csv, val_features.csv, test_features.csv")
+
+# ==================== 二   归一化  ====================
+#       1.加载上一轮保存的数据
+df_train = pd.read_csv('archive/train_features.csv')
+df_val   = pd.read_csv('archive/val_features.csv')
+df_test  = pd.read_csv('archive/test_features.csv')
+# 读取特征列清单
+with open('archive/feature_columns.txt', 'r') as f:
+    feature_cols = f.read().strip().split('\n')
+target_col = 'TOTAL_AC_POWER'
+print("特征列：", feature_cols)
+#         2. 提取特征矩阵
+X_train_raw = df_train[feature_cols].values  # shape: (样本数, 特征维)
+X_val_raw = df_val[feature_cols].values
+X_test_raw = df_test[feature_cols].values
+# 目标值存为单独数组（用于归一化和窗口构建）
+y_train_raw = df_train[target_col].values
+y_val_raw = df_val[target_col].values
+y_test_raw = df_test[target_col].values
+#         3. 归一化（仅用训练集拟合）
+scaler_X = MinMaxScaler()
+scaler_y = MinMaxScaler()
+#  在训练集上拟合
+scaler_X.fit(X_train_raw)
+scaler_y.fit(y_train_raw.reshape(-1, 1))
+#  变换所有数据集
+X_train_scaled = scaler_X.transform(X_train_raw)
+X_val_scaled = scaler_X.transform(X_val_raw)
+X_test_scaled = scaler_X.transform(X_test_raw)
+y_train_scaled = scaler_y.transform(y_train_raw.reshape(-1, 1)).flatten()
+y_val_scaled = scaler_y.transform(y_val_raw.reshape(-1, 1)).flatten()
+y_test_scaled = scaler_y.transform(y_test_raw.reshape(-1, 1)).flatten()
+# 保存归一化器（预测后要逆变换回原始功率）
+with open('archive/scaler_X.pkl', 'wb') as f:
+    pickle.dump(scaler_X, f)
+with open('archive/scaler_y.pkl', 'wb') as f:
+    pickle.dump(scaler_y, f)
+print("归一化完成，scaler 已保存。")
+
+
+#              4. 滑动窗口构建函数
+def create_sliding_windows(X, y, seq_len=96, pred_len=24):
+    """
+    将时间序列数据转换为监督学习样本。
+
+    参数:
+        X: 特征矩阵 (时间步数, 特征维)
+        y: 目标序列 (时间步数,)
+        seq_len: 用作输入的历史窗口长度
+        pred_len: 需要预测的未来步数
+
+    返回:
+        X_windows: (样本数, seq_len, 特征维)
+        y_windows: (样本数, pred_len)
+    """
+    X_windows, y_windows = [], []
+    total_len = len(X)
+
+    for i in range(total_len - seq_len - pred_len + 1):
+        X_windows.append(X[i: i + seq_len])
+        y_windows.append(y[i + seq_len: i + seq_len + pred_len])
+
+    return np.array(X_windows), np.array(y_windows)
+
+
+#              5. 生成窗口样本
+SEQ_LEN = 96  # 过去24小时（15分钟 * 96 = 24h）
+PRED_LEN = 24  # 未来6小时
+print(f"\n历史窗口：{SEQ_LEN} 步  |  预测窗口：{PRED_LEN} 步")
+X_train, y_train = create_sliding_windows(X_train_scaled, y_train_scaled, SEQ_LEN, PRED_LEN)
+X_val, y_val = create_sliding_windows(X_val_scaled, y_val_scaled, SEQ_LEN, PRED_LEN)
+X_test, y_test = create_sliding_windows(X_test_scaled, y_test_scaled, SEQ_LEN, PRED_LEN)
+print(f"训练样本：{X_train.shape}  -> 输入: {X_train.shape} 目标: {y_train.shape}")
+print(f"验证样本：{X_val.shape}")
+print(f"测试样本：{X_test.shape}")
+#                6. 保存最终数据集
+np.savez('archive/scaled_data.npz',
+         X_train=X_train, y_train=y_train,
+         X_val=X_val, y_val=y_val,
+         X_test=X_test, y_test=y_test,
+         seq_len=SEQ_LEN,
+         pred_len=PRED_LEN,
+         feature_names=feature_cols)
+print("\n数据集已保存至 scaled_data.npz")

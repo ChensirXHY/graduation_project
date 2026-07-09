@@ -46,3 +46,43 @@ print(df_merged.isnull().sum())
 df_merged['IRRADIATION'] = df_merged['IRRADIATION'].ffill()
 df_merged['AMBIENT_TEMPERATURE'] = df_merged['AMBIENT_TEMPERATURE'].ffill()
 df_merged['MODULE_TEMPERATURE'] = df_merged['MODULE_TEMPERATURE'].ffill()
+
+
+# 绘制日周期曲线图
+# ---------- 设置中文字体（避免图表中文乱码） ----------
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 或者 ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
+
+# ---------- 图1：前5天逐日功率曲线 ----------
+fig, axes = plt.subplots(5, 1, figsize=(12, 10), sharex=True)
+# 按天分组（避免跨天）
+df_merged['DATE_ONLY'] = df_merged['DATE_TIME'].dt.date
+unique_days = df_merged['DATE_ONLY'].unique()[:5]  # 只取前5天
+
+for i, day in enumerate(unique_days):
+    day_data = df_merged[df_merged['DATE_ONLY'] == day]
+    axes[i].plot(day_data['DATE_TIME'], day_data['TOTAL_AC_POWER'],
+                 color='blue', linewidth=0.8)
+    axes[i].set_ylabel('AC Power (kW)')
+    axes[i].set_title(f'日期: {day}')
+    axes[i].grid(True, alpha=0.3)
+
+plt.xlabel('时间')
+plt.suptitle('前5天逐日交流功率曲线（每15分钟一点）', fontsize=14)
+plt.tight_layout()
+plt.savefig('daily_power_curve.png', dpi=150)  # 保存图表用于论文
+plt.show()
+
+# ---------- 图2：辐照度 vs 功率散点图 ----------
+plt.figure(figsize=(6, 5))
+# 只选取白天（辐照度>0.05 避免夜间零值堆积）
+daytime = df_merged[df_merged['IRRADIATION'] > 0.05]
+plt.scatter(daytime['IRRADIATION'], daytime['TOTAL_AC_POWER'],
+            alpha=0.5, s=5, c='orange')
+plt.xlabel('辐照度 (kW/m^2)')
+plt.ylabel('交流功率 (kW)')
+plt.title('辐照度与发电功率关系（白天数据）')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('irr_vs_power.png', dpi=150)
+plt.show()

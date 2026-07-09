@@ -3,7 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
-
+import os
+# 定义图片文件夹名称，和py脚本同目录
+img_dir = "archive"
 # ---------- 文件路径 ----------
 GEN_PATH = 'archive\Plant_1_Generation_Data.csv'
 WEATHER_PATH = 'archive\Plant_1_Weather_Sensor_Data.csv'
@@ -70,7 +72,7 @@ for i, day in enumerate(unique_days):
 plt.xlabel('时间')
 plt.suptitle('前5天逐日交流功率曲线（每15分钟一点）', fontsize=14)
 plt.tight_layout()
-plt.savefig('daily_power_curve.png', dpi=150)  # 保存图表用于论文
+plt.savefig(os.path.join(img_dir,'daily_power_curve.png'), dpi=150)  # 保存图表用于论文
 plt.show()
 
 # ---------- 图2：辐照度 vs 功率散点图 ----------
@@ -84,7 +86,7 @@ plt.ylabel('交流功率 (kW)')
 plt.title('辐照度与发电功率关系（白天数据）')
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('irr_vs_power.png', dpi=150)
+plt.savefig(os.path.join(img_dir,'irr_vs_power.png'), dpi=150)
 plt.show()
 
 

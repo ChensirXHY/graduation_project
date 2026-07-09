@@ -1,0 +1,12 @@
+TOTAL_AC_POWER
+IRRADIATION
+AMBIENT_TEMPERATURE
+MODULE_TEMPERATURE
+hour_sin
+hour_cos
+minute_sin
+minute_cos
+is_daytime
+temp_diff
+power_roll_mean_1h
+power_roll_std_1h

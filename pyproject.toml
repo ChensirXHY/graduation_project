@@ -26,16 +26,19 @@ filterwarnings = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["tests/*"]
+# src/models.py 依赖 torch（约 2.5 GB），CI 里刻意不装。
+# 该模块被排除出覆盖率口径，理由：
+#   1. 无 torch 时它完全不被导入，215 行全记 missing，会把覆盖率
+#      拉到 31%，让"纯逻辑模块"的真实覆盖水平被淹没；
+#   2. 其正确性由 tests/test_models.py 的形状契约测试守护
+#      （输出形状、蒸馏减半、权重往返、参数校验），本地 GPU 环境运行。
+# 覆盖率口径因此聚焦 data/config/logger 三个纯逻辑模块。
+omit = ["src/models.py"]
 
 [tool.coverage.report]
-# 覆盖率门槛说明：
-#   本地全量（含 torch 的模型测试）可到 90%+。
-#   CI 里刻意不装 torch，test_models.py 整文件被 importorskip，
-#   src/models.py 的 38 行在 CI 中不计入执行，总量因此下降到 70% 左右。
-#   门槛取 60：留出余量，同时保证 data/config/logger 三个模块
-#   在 CI 里也必须达到高覆盖。
-fail_under = 60
+# CI（无 torch）与本地（有 torch）口径一致：排除 models.py 后约 99%。
+# 门槛取 70，留出余量。
+fail_under = 70
 show_missing = true
 exclude_lines = [
     "pragma: no cover",

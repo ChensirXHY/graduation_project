@@ -1,0 +1,82 @@
+# ============================================================
+# 实验配置：替代脚本里的硬编码常量
+#
+# 用法（在训练脚本中）：
+#   from src.config import load_config
+#   cfg = load_config("configs/base.yaml")
+#   print(cfg["model"]["d_model"])
+#
+# 修改原则：改动任何超参后，请重跑 05_evaluate_compare.py，
+# 并把新结果与旧 metrics.csv 对比，不要凭感觉调参。
+# ============================================================
+
+experiment:
+  name: transformer_pv_forecast
+  seed: 42                 # 固定随机种子，保证结果可复现
+  device: auto             # auto | cuda | cpu，自动探测
+
+data:
+  npz: archive/scaled_data.npz        # 02 脚本产出：已归一化、已窗口化
+  scaler_y: archive/scaler_y.pkl      # 02 脚本产出：目标变量归一化器
+  feature_names_txt: archive/feature_columns.txt
+  input_len: 96            # 历史 96 点 = 24 小时
+  pred_len: 24             # 预测未来 24 点 = 6 小时
+  # 测试集按时间顺序切分（02 脚本），非随机切分 —— 时序任务铁律
+
+model:
+  name: informer            # 本文方法：Informer（Zhou et al., AAAI 2021）
+  input_size: 12            # 特征数（02 脚本产出的特征列数）
+  d_model: 64
+  nhead: 4                  # 必须整除 d_model
+  e_layers: 3               # 编码层数
+  d_layers: 1               # 解码层数
+  d_ff: 128
+  dropout: 0.1
+  factor: 5                 # ProbSparse 采样因子
+  label_len: 24             # 解码器"开始标记"长度
+  distil: false             # 编码器蒸馏。超参扫描实测：本项目序列仅 96 步，
+                            # 蒸馏（序列减半）会丢失细粒度信息，关闭后
+                            # MAE 1904.7 → 1877.4。蒸馏的收益在 720 步级
+                            # 长序列上才体现（论文原场景），详见 README 消融。
+  activation: gelu
+
+transformer_ablation:       # 普通注意力 Transformer（消融对照，04a 脚本）
+  d_model: 64
+  nhead: 4
+  num_encoder_layers: 3
+  dim_feedforward: 256
+  dropout: 0.10
+  pool: concat              # mean+last 拼接（超参扫描最优）
+
+training:
+  batch_size: 64
+  epochs: 150
+  learning_rate: 0.0005
+  weight_decay: 0.0001
+  scheduler: cosine        # cosine | none
+  early_stopping_patience: 20
+  grad_clip: 1.0           # 防梯度爆炸，注意力堆叠训练必备
+  loss: mse                # 对大幅误差更敏感，符合调度对极端值的要求
+  # 残差目标：预测 y − 最后一步功率 的增量，推理时加回基线。
+  # 实测把普通 Transformer 的 MAE 从 1888 降到 1865 kW。
+  residual: true
+
+baselines:
+  lstm:                    # 03_baseline_lstm.py 的权重，只做推理对比
+    weights: models/lstm_baseline.pth
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.2
+  lightgbm:                # 03b_baseline_lightgbm.py，MultiOutputRegressor
+    n_estimators: 500
+    learning_rate: 0.05
+    num_leaves: 31
+
+evaluation:
+  metrics: [MAE, RMSE, MAPE, R2]
+  save_predictions: true   # 保存逐点预测值，便于误差分析
+
+output:
+  model_dir: models/
+  results_dir: results/
+  log_dir: logs/

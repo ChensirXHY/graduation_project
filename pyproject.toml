@@ -1,0 +1,44 @@
+# ============================================================
+# 项目元信息与 pytest 配置
+# ============================================================
+
+[project]
+name = "pv-power-forecast-transformer"
+version = "0.1.0"
+description = "基于时序 Transformer 的光伏发电功率预测（本科毕业设计）"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["time-series", "forecasting", "transformer", "solar", "pytorch", "lightgbm"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[tool.pytest.ini_options]
+# 显式指定测试目录，避免 pytest 扫描到 archive/、models/ 等数据目录
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning:lightgbm.*",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+# 覆盖率门槛说明：
+#   本地全量（含 torch 的模型测试）可到 90%+。
+#   CI 里刻意不装 torch，test_models.py 整文件被 importorskip，
+#   src/models.py 的 38 行在 CI 中不计入执行，总量因此下降到 70% 左右。
+#   门槛取 60：留出余量，同时保证 data/config/logger 三个模块
+#   在 CI 里也必须达到高覆盖。
+fail_under = 60
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

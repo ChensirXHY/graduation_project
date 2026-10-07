@@ -1,0 +1,26 @@
+# ============================================================
+# 光伏发电功率预测 —— 运行依赖
+# 安装：pip install -r requirements.txt
+#
+# 版本依据实际开发环境（conda dl_env, Python 3.10）锁定。
+# ⚠️ torch 请按自己的 CUDA 版本安装，见 https://pytorch.org/get-started/locally/
+#    本项目开发环境为 CUDA 11.8：
+#    pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cu118
+# ============================================================
+
+# --- 深度学习 ---
+torch==2.7.1                    # 按需替换为对应 CUDA/CPU 版本
+numpy==1.26.4                   # 与 torch 2.7.1 兼容；勿升 2.x
+
+# --- 数据处理 ---
+pandas==2.3.3
+scikit-learn==1.7.2             # MinMaxScaler / MultiOutputRegressor / 指标
+
+# --- 基线模型（简历中提到对比 LightGBM）---
+lightgbm==4.5.0
+
+# --- 可视化 ---
+matplotlib==3.10.9
+
+# --- 配置与日志 ---
+pyyaml==6.0.3

@@ -1,0 +1,68 @@
+# ============================================================
+# ruff 配置：静态检查 + 格式化 + docstring 检查
+#
+# 用法：
+#   ruff check .            # 静态检查
+#   ruff check --fix .      # 自动修复可修复项
+#   ruff format .           # 格式化
+# ============================================================
+
+line-length = 100
+target-version = "py310"
+
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".ruff_cache",
+    ".pytest_cache",
+    # 数据与生成物，不是源码
+    "archive",
+    "models",
+    "results",
+    "logs",
+    "_backup_*",
+]
+
+[lint]
+# 规则集说明：
+#   E/W  pycodestyle 风格
+#   F    pyflakes，未使用变量/导入
+#   I    isort，导入排序
+#   N    pep8-naming，命名规范
+#   D    pydocstyle，docstring 检查 —— 对应"良好的注释"这一要求
+#   UP   pyupgrade，现代语法
+#   B    flake8-bugbear，常见陷阱
+#   SIM  flake8-simplify，冗余写法
+#   RET  flake8-return，返回语句简化
+select = ["E", "W", "F", "I", "N", "D", "UP", "B", "SIM", "RET"]
+
+# 逐条忽略的理由：
+ignore = [
+    "D203",   # 与 D211 冲突，社区主流选 D211
+    "D213",   # 与 D212 冲突，社区主流选 D212
+    "D413",   # 与 ruff format 冲突（要求 docstring 末尾空行，formatter 会删掉）
+    "D400",   # 要求 ASCII 句点结尾；中文 docstring 自然以"。"结尾
+    "D415",   # 同上
+    "E501",   # 行长由 formatter 控制
+    "B008",   # 允许函数默认值里调用（dataclass field 需要）
+    # 机器学习领域惯例：X 表示特征矩阵、y 表示标签。
+    # 强行改成小写反而脱离 scikit-learn / PyTorch 社区的所有示例代码。
+    "N803",   # 参数名 X/y 不强制小写
+    "N806",   # 变量名 X_train/y_train 不强制小写
+]
+
+[lint.per-file-ignores]
+# 编号脚本是流水线入口，薄封装，不强制逐函数 docstring
+"0[1-5]*.py" = ["D103"]
+# 测试文件不必写 Args/Returns 段；测试方法名已说明意图，不强制逐方法 docstring
+"tests/**" = ["D103", "D100", "D102"]
+# 01/02/03 是改造前的历史脚本：它们已经跑通并产出了当前数据，
+# 重构它们的收益远小于改动带来的复现风险。因此对这些文件只保留
+# 最基本的 E（语法/缩进）检查，其余规则一律豁免，避免无意义 churn。
+# 新脚本 03b/04/05 与 src/ 不受此豁免影响。
+"0[1-3]_*.py" = ["D", "N", "I001", "UP", "W605", "W292", "F401", "B", "SIM", "RET"]
+
+[lint.pydocstyle]
+convention = "google"

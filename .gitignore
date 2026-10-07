@@ -1,0 +1,77 @@
+# ============================================================
+# .gitignore —— 光伏功率预测项目（graduation_project）
+#
+# 原则：凡是"能重新生成的"和"体积大的"都不进仓库。
+# 数据管线：Kaggle 原始数据 → 01 清洗 → 02 特征与窗口 → 03/03b/04 训练 → 05 对比。
+# 除 scaler 与 metrics.csv 外，管线中间产物全部由脚本重新生成。
+# ============================================================
+
+# ---------- 原始数据集（体积大 + Kaggle 版权，需自行下载）----------
+archive/*.csv
+data/
+raw/
+
+# ---------- 管线中间产物（可由 01/02 重新生成）----------
+archive/*.npz
+archive/train_features.csv
+archive/val_features.csv
+archive/test_features.csv
+
+# ---------- 模型权重（训练产物，改用 GitHub Releases 分发）----------
+models/*.pth
+models/*.pt
+models/*.ckpt
+models/*.pkl
+checkpoints/
+# 例外：归一化器体积极小（<2 KB）且是 04/05 评估的必需输入，保留
+!archive/scaler_X.pkl
+!archive/scaler_y.pkl
+
+# ---------- 实验结果（可重新生成，且频繁变动产生 diff 噪音）----------
+results/*.png
+results/*.npy
+logs/
+runs/
+*.log
+tensorboard/
+wandb/
+lightning_logs/
+# 例外：多模型对比指标表是"简历数字的依据"，入库备查
+!results/metrics.csv
+
+# ---------- IDE / 编辑器（个人配置，绝不进公共仓库）----------
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+build/
+dist/
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---------- 测试与缓存 ----------
+.pytest_cache/
+.tmp_tests/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 备份目录（本地运维产物）----------
+_backup*/

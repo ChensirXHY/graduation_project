@@ -17,6 +17,9 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.10"
+  # 脚本式布局（非可安装包）：让 `pytest tests/` 能找到 src 包。
+  # tests/conftest.py 也会注入一次，这里是双保险。
+  PYTHONPATH: ${{ github.workspace }}
 
 jobs:
   # --------------------------------------------------------------------------

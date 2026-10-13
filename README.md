@@ -18,7 +18,7 @@
 
 本项目基于印度两座光伏电站（Plant 1，22 台逆变器，峰值约 29 MW）的真实运行数据，
 构建 **历史 24 小时（96 点）→ 未来 6 小时（24 点）** 的多步预测模型，
-并与持续预测（naive）、LightGBM、LSTM 三个基线方法系统对比。
+并与持续预测（naive）、LightGBM、SARIMA、LSTM 四个基线方法系统对比。
 
 **本科毕业设计** ｜ 作者：江林岩 ｜ 安徽新华学院 人工智能专业
 
@@ -32,6 +32,7 @@
 |---|---|---|---|---|
 | 持续预测（naive） | 5710.31 | 8734.47 | 163.27 | -0.111 |
 | LightGBM | 1994.23 | 3524.27 | 38.04 | 0.819 |
+| SARIMA | 2261.15 | 4020.39 | 48.63 | 0.765 |
 | LSTM | 1861.92 | 3155.07 | 44.41 | 0.855 |
 | **Informer（本文）** | **1877.44** | **3054.82** | **40.71** | **0.864** |
 | Transformer（普通注意力，消融） | 1859.26 | 3025.34 | 39.45 | 0.867 |
@@ -41,13 +42,16 @@
 - Informer 对比 LightGBM：**MAE −5.9%，RMSE −13.3%，R² +4.5pp**，显著更优；
 - Informer 对比 LSTM：MAE 相当（+0.8%），**RMSE −3.2%，R² +0.9pp**，
   且注意力复杂度为 O(L·log L) 而非 LSTM 的逐步递推；
+- SARIMA（统计基线）R² 0.765，优于 naive 但明显弱于 ML 模型 —— 它只用了
+  功率单变量、且是线性季节模型，缺天气特征与非线性建模能力，
+  这一差距正好说明"引入多源气象特征 + 深度非线性模型"的价值；
 - 消融发现：普通注意力 Transformer 在本数据集（96 步）上与 Informer 持平略优，
   ProbSparse 稀疏注意力的收益主要在长序列场景（论文原数据为 720 步）——
   这是论文"讨论"一章的现成素材（见「已知限制」）。
 
 > **测试集口径**：2020-06-12 之后的连续数据，455 个窗口，按时间顺序切分（非随机）。
-> **复现命令**：依次运行 `03b_baseline_lightgbm.py`、`04_train_informer.py`、
-> `04a_train_transformer.py`、`05_evaluate_compare.py`，
+> **复现命令**：依次运行 `03b_baseline_lightgbm.py`、`03c_baseline_sarima.py`、
+> `04_train_informer.py`、`04a_train_transformer.py`、`05_evaluate_compare.py`，
 > 指标表自动写入 `results/metrics.csv`。
 > **调参方法**：三组超参扫描共 21 个配置，最终配置按**验证集损失**选择
 > （best_val 0.00517 为全部配置最低），测试集仅用于最终报告，未被用于选参。
@@ -72,7 +76,9 @@ python 01_explore_quality.py          # 数据探索与质量报告（约 30 分
 python 02_preprocess_windows.py       # 清洗 + 特征工程 + 滑动窗口（约 40 分钟）
 python 03_baseline_lstm.py            # LSTM 基线（约 1 小时，GPU 几分钟）
 python 03b_baseline_lightgbm.py       # LightGBM 基线（几分钟）
-python 04_train_transformer.py        # Transformer 主模型（GPU 约 5 分钟）
+python 03c_baseline_sarima.py         # SARIMA 基线（约 15 分钟，滚动 24 步预测）
+python 04_train_informer.py           # Informer 主模型（GPU 约 5 分钟）
+python 04a_train_transformer.py       # 普通注意力 Transformer 消融（GPU 约 3 分钟）
 python 05_evaluate_compare.py         # 多模型对比与可视化
 
 # 4. 跑测试（不需要数据文件，几秒完成）
@@ -93,14 +99,12 @@ pytest tests/ -v
 ```
 Kaggle 原始 CSV ──01──▶ 质量报告 + 清洗 ──02──▶ 特征工程 + 归一化 + 滑动窗口
                                                             │
-                                    ┌───────────────────────┤
-                                    ▼                       ▼
-                            03 LSTM 基线            03b LightGBM 基线
-                                    │                       │
-                                    ▼                       ▼
-                    04a 普通 Transformer（消融） ◀── 04 Informer（本文）
-                                    └───────────05 统一对比──▶
-                                            metrics.csv
+                    ┌───────────────────────────┬───────────┼───────────┐
+                    ▼                           ▼           ▼           ▼
+            03 LSTM 基线              03b LightGBM 基线  03c SARIMA 基线
+                    │                           │           │           │
+                    ▼                           ▼           ▼           ▼
+     04a 普通 Transformer（消融） ◀── 04 Informer（本文）    └────05 统一对比──▶ metrics.csv
 ```
 
 ### 数据处理要点
@@ -191,6 +195,7 @@ graduation_project/
 ├── 02_preprocess_windows.py     # 清洗 + 特征工程 + 滑动窗口
 ├── 03_baseline_lstm.py          # LSTM 基线
 ├── 03b_baseline_lightgbm.py     # LightGBM 基线（MultiOutputRegressor）
+├── 03c_baseline_sarima.py       # SARIMA 基线（滚动 24 步预测）
 ├── 04_train_informer.py         # Informer 主模型（本文方法）
 ├── 04a_train_transformer.py     # 普通注意力 Transformer（消融对照）
 ├── 05_evaluate_compare.py       # 多模型对比 → results/metrics.csv

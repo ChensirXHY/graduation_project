@@ -71,6 +71,11 @@ baselines:
     n_estimators: 500
     learning_rate: 0.05
     num_leaves: 31
+  sarima:                  # 03c_baseline_sarima.py，滚动 24 步预测
+    order: [1, 0, 1]       # 非季节 (p, d, q)
+    seasonal_order: [0, 1, 0, 96]   # 季节 (P, D, Q, S)，S=96 为日周期，
+                            # 仅 D=1 季节差分（季节 AR/MA 会使状态维度过大，
+                            # 滚动预测慢两个数量级且收益有限）
 
 evaluation:
   metrics: [MAE, RMSE, MAPE, R2]

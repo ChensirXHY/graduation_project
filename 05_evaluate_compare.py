@@ -1,4 +1,4 @@
-"""多模型对比与可视化：持续预测 / LightGBM / LSTM / Transformer（消融） / Informer。
+"""多模型对比与可视化：持续预测 / LightGBM / SARIMA / LSTM / Transformer（消融） / Informer。
 
 输出：
     results/metrics.csv                    各模型指标表（"简历数字"的依据，入库）
@@ -181,6 +181,16 @@ def predict_lightgbm() -> np.ndarray:
     return np.load(preds_file)
 
 
+def predict_sarima() -> np.ndarray:
+    """加载 03c 脚本保存的 SARIMA 逐点预测（返回真实 kW 值）。"""
+    preds_file = RESULTS_DIR / "sarima_test_predictions.npy"
+    if not preds_file.exists():
+        raise FileNotFoundError(
+            f"SARIMA 预测不存在：{preds_file}\n" "  修复：先运行 03c_baseline_sarima.py。"
+        )
+    return np.load(preds_file)
+
+
 def evaluate_all(
     X_test: np.ndarray, y_real: np.ndarray, scaler_y
 ) -> tuple[dict[str, dict[str, float]], dict[str, np.ndarray]]:
@@ -198,6 +208,7 @@ def evaluate_all(
 
     for name, loader in [
         ("LightGBM", predict_lightgbm),
+        ("SARIMA", predict_sarima),
         ("LSTM", lambda: scaler_y.inverse_transform(predict_lstm(X_test))),
         (
             "Transformer（普通注意力，消融）",
@@ -254,7 +265,7 @@ def plot_comparison(y_real: np.ndarray, preds_real: dict[str, np.ndarray]) -> No
     # 图 1：单窗口预测对比
     plt.figure(figsize=(8, 3.8))
     plt.plot(future_hours, y_real[sample_idx], "o-", label="真实值", linewidth=2)
-    styles = ["s--", "^--", "d--"]
+    styles = ["s--", "^--", "d--", "v--", "*--"]
     for (name, preds), style in zip(preds_real.items(), styles, strict=False):
         plt.plot(future_hours, preds[sample_idx], style, label=name, alpha=0.85)
     plt.xlabel("未来时间 (小时)")

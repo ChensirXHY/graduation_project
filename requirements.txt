@@ -16,8 +16,9 @@ numpy==1.26.4                   # 与 torch 2.7.1 兼容；勿升 2.x
 pandas==2.3.3
 scikit-learn==1.7.2             # MinMaxScaler / MultiOutputRegressor / 指标
 
-# --- 基线模型（简历中提到对比 LightGBM）---
+# --- 基线模型（对比 LightGBM / SARIMA）---
 lightgbm==4.5.0
+statsmodels==0.15.0             # SARIMA 基线（03c_baseline_sarima.py）
 
 # --- 可视化 ---
 matplotlib==3.10.9
